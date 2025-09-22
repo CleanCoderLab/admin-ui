@@ -1,38 +1,30 @@
-name: Deploy Angular to Render
+name: CI/CD Angular to Render
 
 on:
   push:
     branches:
-      - main  # Change to dev if you want to auto-deploy from dev
+      - main   # or dev branch, adjust as needed
 
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'  # Angular supported Node version
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Build Angular
-      run: |
-        # Build Angular in production mode
-        npm run build -- --configuration production
-        # Automatically add _redirects file for SPA routing
-        DIST_FOLDER=$(ls -d dist/* | head -n 1)
-        echo "/* /index.html 200" > $DIST_FOLDER/_redirects
-        echo "Created _redirects in $DIST_FOLDER"
+      - name: Build Angular app
+        run: npm run build --prod
 
-    - name: Deploy to Render
-      uses: render-examples/deploy-static-site@v1
-      with:
-        apiKey: ${{ secrets.RENDER_API_KEY }}
-        serviceId: ${{ secrets.RENDER_SERVICE_ID }}
-        rootDirectory: ${{ steps.build.outputs.dist_folder || 'dist' }}
+      - name: Trigger Render Deploy
+        run: curl -X POST "$RENDER_DEPLOY_HOOK_URL"
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }} 
